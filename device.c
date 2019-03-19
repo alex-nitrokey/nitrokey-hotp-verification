@@ -110,6 +110,9 @@ int device_connect(struct Device *dev, const char *key_brand) {
   if (dev->mp_devhandle != nullptr)
     return 1;
 
+//  FIXME set connected model variable
+//  FIXME fail on not supported firmware version: Pro 8 and older; Storage 53 and older
+
   for (int di = 0; di < SUPPORTED_DEVICES_COUNT; ++di) {
     dev->mp_devhandle = hid_open(m_vid, m_pid[di], nullptr);
     res = dev->mp_devhandle != nullptr;
