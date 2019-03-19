@@ -32,7 +32,8 @@
 #include "return_codes.h"
 
 const unsigned short m_vid = 0x20a0;
-const unsigned short m_pid = 0x4108;
+const unsigned short m_pid[] = {0x4108,0x4109};
+const unsigned char SUPPORTED_DEVICES_COUNT = 2;
 
 static const int CONNECTION_ATTEMPTS_COUNT = 80;
 
@@ -103,25 +104,33 @@ int device_send(struct Device *dev, uint8_t *in_data, size_t data_size, uint8_t 
 }
 
 
-int device_connect(struct Device *dev, char *key_brand) {
-  bool res;
+int device_connect(struct Device *dev, const char *key_brand) {
+  bool res = false;
 
   if (dev->mp_devhandle != nullptr)
     return 1;
 
-  dev->mp_devhandle = hid_open(m_vid, m_pid, nullptr);
-  res = dev->mp_devhandle != nullptr;
+  for (int di = 0; di < SUPPORTED_DEVICES_COUNT; ++di) {
+    dev->mp_devhandle = hid_open(m_vid, m_pid[di], nullptr);
+    res = dev->mp_devhandle != nullptr;
+    usleep(CONNECTION_ATTEMPT_DELAY_MICRO_SECONDS);
+    if (res) return res;
+  }
 
   if (!res){
-    fprintf(stderr, "Trying to connect to %s: ", key_brand);
-    for (int i=0; i < CONNECTION_ATTEMPTS_COUNT; i++){
-      dev->mp_devhandle = hid_open(m_vid, m_pid, nullptr);
-      res = dev->mp_devhandle != nullptr;
-      usleep(CONNECTION_ATTEMPT_DELAY_MICRO_SECONDS);
-      if (res == true) break;
-      fprintf(stderr, "."); fflush(stderr);
-    }
-    fprintf(stderr, "\n"); fflush(stderr);
+      fprintf(stderr, "Trying to connect to %s: ", key_brand);
+      for (int i = 0; i < CONNECTION_ATTEMPTS_COUNT; i++) {
+        for (int di = 0; di < SUPPORTED_DEVICES_COUNT; ++di) {
+          dev->mp_devhandle = hid_open(m_vid, m_pid[di], nullptr);
+          res = dev->mp_devhandle != nullptr;
+          usleep(CONNECTION_ATTEMPT_DELAY_MICRO_SECONDS);
+          if (res == true) break;
+          fprintf(stderr, ".");
+          fflush(stderr);
+        }
+      }
+      fprintf(stderr, "\n");
+      fflush(stderr);
   }
 
   return res;
